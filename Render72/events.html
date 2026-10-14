@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#f3f1e9">
+  <meta name="description" content="Find music, workshops, art, and good people with Sidequest's campus event guide.">
+  <title>Explore events — Sidequest</title>
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="/styles.css">
+</head>
+<body class="events-page">
+  <a class="skip-link" href="#main">Skip to content</a>
+  <header class="site-header">
+    <a class="brand" href="/" aria-label="Sidequest home"><span class="brand-mark">s<span>q</span></span><span>SIDEQUEST</span></a>
+    <nav class="main-nav" id="mobile-menu" aria-label="Main navigation"><a class="nav-link" href="/">Home</a><a class="nav-link active" href="/events.html" aria-current="page">Explore events</a><a class="nav-link nav-about" href="/#about">Our thing</a></nav>
+    <a class="header-cta" href="/">Back to home <span aria-hidden="true">↗</span></a>
+    <button class="menu-toggle" type="button" aria-expanded="false" aria-controls="mobile-menu" aria-label="Open navigation"><span></span><span></span></button>
+  </header>
+  <main id="main" class="events-main wrap">
+    <section class="events-intro"><div><p class="eyebrow"><span class="live-dot"></span> THE CAMPUS, CURRENTLY</p><h1>Find your<br><em>next thing.</em></h1><p class="events-lede">A little browsing, a lot of possibility. See what’s coming up and make a plan that feels like you.</p></div><div class="intro-stamp"><span>GOOD<br>THINGS<br>HAPPEN</span><b>↘</b></div></section>
+    <section class="event-explorer" aria-labelledby="event-list-title">
+      <div class="explorer-top"><div><p class="eyebrow"><span class="section-number">01</span> THE WHAT’S ON LIST</p><h2 id="event-list-title">Open <em>invitation.</em></h2></div><p class="results-note" id="results-note" aria-live="polite">Finding your next thing…</p></div>
+      <div class="filter-panel">
+        <label class="search-box"><span class="search-icon" aria-hidden="true">⌕</span><span class="sr-only">Search events</span><input id="event-search" type="search" placeholder="Search by event, place, or vibe…" autocomplete="off"><kbd>Ctrl K</kbd></label>
+        <div class="filter-row"><div class="category-filters" id="category-filters" role="group" aria-label="Filter events by category"><button class="filter-chip is-active" type="button" data-category="all" aria-pressed="true">Everything</button></div><label class="sort-control">SORT <select id="event-sort" aria-label="Sort events"><option value="soonest">Soonest</option><option value="latest">Latest</option><option value="az">A to Z</option></select></label></div>
+      </div>
+      <div id="feed-notice" class="feed-notice" role="status" hidden></div>
+      <div id="event-list" class="event-list" aria-live="polite" aria-busy="true"></div>
+      <div id="empty-state" class="empty-state" hidden><span aria-hidden="true">⌕</span><h3>No plans found. Yet.</h3><p>Try a different search or clear your filters. Your next good thing is out there.</p><button class="button button-dark" id="clear-filters" type="button">Clear filters</button></div>
+      <div class="load-more-wrap"><button class="button button-outline" id="load-more" type="button" hidden>Show more events <span aria-hidden="true">↓</span></button></div>
+    </section>
+    <section id="event-detail" class="event-detail" hidden aria-labelledby="detail-title"><a class="back-link" href="/events.html">← Back to all events</a><div id="detail-content"></div></section>
+    <section class="events-bottom"><p class="eyebrow">MAKE THE FIRST MOVE</p><p>Know about something good?<br><a href="mailto:hello@sidequest.example">Tell us about it ↗</a></p></section>
+  </main>
+  <footer class="site-footer"><div class="footer-main wrap"><a class="brand brand-footer" href="/" aria-label="Sidequest home"><span class="brand-mark">s<span>q</span></span><span>SIDEQUEST</span></a><p>Good plans travel.<br>Pass one along.</p><div class="footer-links"><a href="/">Home</a><a href="/#about">Our thing</a><a href="mailto:hello@sidequest.example">Say hello ↗</a></div></div><div class="footer-bottom wrap"><span>© <span id="year"></span> SIDEQUEST STUDIO</span><span>GO OUTSIDE. BE A PERSON.</span><a href="#main">BACK TO TOP ↑</a></div></footer>
+  <script src="/config.js"></script><script src="/app.js" defer></script>
+</body>
+</html>
