@@ -72,6 +72,93 @@
   };
   const statusLabel = (value) => ({ open: "Registration open", closed: "Registration closed", sold_out: "Sold out", active: "Upcoming", completed: "Completed", unknown: "Registration info" }[String(value || "").toLowerCase()] || String(value || "Details").replaceAll("_", " "));
   const deadlineLabel = (value) => value ? `${dateLabel(value)} · ${timeLabel(value)}` : "Not listed";
+  const calendarDateTime = (day, time = "") => {
+    const key = dateKey(day);
+    if (!key) return null;
+    const match = String(time).match(/^(\d{1,2}):(\d{2})(?::\d{2})?$/);
+    if (match) {
+      const date = new Date(`${key}T${String(Number(match[1])).padStart(2, "0")}:${match[2]}:00+05:30`);
+      return validDate(date) ? date : null;
+    }
+    if (/^\d{4}-\d{2}-\d{2}$/.test(String(day))) return null;
+    const date = dateValue(day);
+    return validDate(date) ? date : null;
+  };
+  const calendarStamp = (date) => date.toISOString().replace(/[-:]/g, "").replace(/\.\d{3}Z$/, "Z");
+  const calendarEscape = (value) => String(value ?? "").replace(/\\/g, "\\\\").replace(/\r\n|\n|\r/g, "\\n").replace(/,/g, "\\,").replace(/;/g, "\\;");
+  const foldCalendarLine = (line) => {
+    let result = "";
+    let bytes = 0;
+    for (const character of line) {
+      const length = new TextEncoder().encode(character).length;
+      if (bytes + length > 72) { result += "\r\n "; bytes = 1; }
+      result += character;
+      bytes += length;
+    }
+    return result;
+  };
+  const nextCalendarDay = (day) => {
+    const date = new Date(`${day}T00:00:00Z`);
+    date.setUTCDate(date.getUTCDate() + 1);
+    return date.toISOString().slice(0, 10);
+  };
+  function downloadCalendar(event, eventUrl) {
+    const startDay = dateKey(event.date);
+    if (!startDay) return false;
+    const start = calendarDateTime(event.date, event.time);
+    const allDay = !start && /^\d{4}-\d{2}-\d{2}$/.test(String(event.date)) && !event.time;
+    let scheduleLines;
+    if (allDay) {
+      const lastDay = dateKey(event.endDate) || startDay;
+      scheduleLines = [`DTSTART;VALUE=DATE:${startDay.replaceAll("-", "")}`, `DTEND;VALUE=DATE:${nextCalendarDay(lastDay).replaceAll("-", "")}`];
+    } else if (start) {
+      let end = event.endTime ? calendarDateTime(event.endDate || event.date, event.endTime) : null;
+      if (!end && event.endDate) {
+        const endDay = dateKey(event.endDate);
+        if (endDay) end = new Date(`${endDay}T23:59:00+05:30`);
+      }
+      if (!end || end <= start) end = new Date(start.getTime() + 60 * 60 * 1000);
+      scheduleLines = [`DTSTART:${calendarStamp(start)}`, `DTEND:${calendarStamp(end)}`];
+    } else return false;
+
+    const details = [event.description, event.venue, event.placeDetail].filter(Boolean).join("\n");
+    const uid = `${String(event.id).replace(/[^a-zA-Z0-9._-]/g, "-")}@sidequest.events`;
+    const lines = [
+      "BEGIN:VCALENDAR", "VERSION:2.0", "PRODID:-//Sidequest//Campus Events//EN", "CALSCALE:GREGORIAN", "METHOD:PUBLISH",
+      "BEGIN:VEVENT", `UID:${uid}`, `DTSTAMP:${calendarStamp(new Date())}`, ...scheduleLines,
+      `SUMMARY:${calendarEscape(event.title)}`, `DESCRIPTION:${calendarEscape(details)}`,
+      `LOCATION:${calendarEscape([event.venue, event.placeDetail].filter(Boolean).join(" · "))}`, `URL:${eventUrl}`,
+      "END:VEVENT", "END:VCALENDAR"
+    ];
+    const blob = new Blob([lines.map(foldCalendarLine).join("\r\n") + "\r\n"], { type: "text/calendar;charset=utf-8" });
+    const downloadUrl = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    const slug = event.title.toLowerCase().normalize("NFKD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") || "sidequest-event";
+    link.href = downloadUrl;
+    link.download = `${slug}.ics`;
+    link.hidden = true;
+    document.body.append(link);
+    link.click();
+    link.remove();
+    window.setTimeout(() => URL.revokeObjectURL(downloadUrl), 1000);
+    return true;
+  }
+  async function copyText(value) {
+    if (navigator.clipboard?.writeText && window.isSecureContext) {
+      await navigator.clipboard.writeText(value);
+      return;
+    }
+    const input = document.createElement("textarea");
+    input.value = value;
+    input.setAttribute("readonly", "");
+    input.style.position = "fixed";
+    input.style.opacity = "0";
+    document.body.append(input);
+    input.select();
+    const copied = document.execCommand("copy");
+    input.remove();
+    if (!copied) throw new Error("Clipboard unavailable");
+  }
   const normalizeEvent = (event, index = 0) => {
     if (!event || typeof event !== "object") return null;
     const schedule = first(event.schedule_summary, event.scheduleSummary, {});
@@ -102,7 +189,7 @@
     const minTeamSize = numeric(event.min_teamsize);
     const maxTeamSize = numeric(event.max_teamsize);
     const palette = ["lime", "blue", "coral", "purple", "cream", "dark"][index % 6];
-    return { ...event, id: String(id), title: String(title), date, time: separateTime, endDate, endTime, venue: String(venue || locationLabel), placeDetail: String(placeDetail), category: String(category), description: String(description), poster: String(poster), posterAlt: String(posterAlt), tags, priceLabel: price, eventType: String(first(event.event_type, event.eventType, "EVENT")).toLowerCase(), modeLabel: mode === "ONLINE" ? "Online" : mode === "OFFLINE" ? "Offline" : "Mode to be announced", eventStatus: String(first(event.event_status, event.eventStatus, "ACTIVE")).toLowerCase(), registrationStatus: String(first(event.registration_status, event.registrationStatus, "UNKNOWN")).toLowerCase(), registrationDeadline: first(event.registration_deadline, event.registrationDeadline, ""), isFeatured: Boolean(event.is_featured ?? event.isFeatured), isTechnical: Boolean(event.is_technical ?? event.isTechnical), seatsTotal, seatsFilled, seatsLeft, teamSize: minTeamSize !== null && maxTeamSize !== null ? minTeamSize === 1 && maxTeamSize === 1 ? "Solo entry" : minTeamSize === maxTeamSize ? `${minTeamSize} people` : `${minTeamSize}–${maxTeamSize} people` : "", palette, organizer: String(first(event.organizer, event.host, event.organizerName, event.organizer_name, "Event team")), registrationUrl: safeUrl(first(event.registrationUrl, event.registration_url, event.url, event.link, "")) };
+    return { ...event, id: String(id), title: String(title), date, time: separateTime, endDate, endTime, venue: String(venue || locationLabel), placeDetail: String(placeDetail), category: String(category), description: String(description), poster: String(poster), posterAlt: String(posterAlt), tags, priceLabel: price, eventType: String(first(event.event_type, event.eventType, "EVENT")).toLowerCase(), modeLabel: mode === "ONLINE" ? "Online" : mode === "OFFLINE" ? "Offline" : "Mode to be announced", eventStatus: String(first(event.event_status, event.eventStatus, "ACTIVE")).toLowerCase(), registrationStatus: String(first(event.registration_status, event.registrationStatus, "UNKNOWN")).toLowerCase(), registrationDeadline: first(event.registration_deadline, event.registrationDeadline, ""), isFeatured: Boolean(event.is_featured ?? event.isFeatured), isTechnical: Boolean(event.is_technical ?? event.isTechnical), seatsTotal, seatsFilled, seatsLeft, teamSize: minTeamSize !== null && maxTeamSize !== null ? minTeamSize === 1 && maxTeamSize === 1 ? "Solo entry" : minTeamSize === maxTeamSize ? `${minTeamSize} people` : `${minTeamSize}–${maxTeamSize} people` : "", palette, organizer: String(first(event.organizer, event.host, event.organizerName, event.organizer_name, "Event team")), registrationUrl: safeUrl(first(event.registrationUrl, event.registration_url, event.registrationLink, event.registration_link, "")) };
   };
   const unpack = (json) => {
     const value = json?.events ?? json?.event ?? json?.data?.events ?? json?.data?.event ?? json?.data ?? json?.results ?? json?.items ?? json?.result ?? json;
@@ -328,9 +415,36 @@
     const teamLabel = event.teamSize || (numeric(event.min_teamsize) === 1 ? "Solo entry" : "Team details not listed");
     const seatLabel = event.seatsTotal !== null ? `${event.seatsFilled ?? 0} of ${event.seatsTotal} seats taken` : "Capacity not listed";
     const tags = event.tags.length ? `<div class="detail-tags" aria-label="Topics">${event.tags.map((item) => `<span>${html(item)}</span>`).join("")}</div>` : "";
-    const register = event.registrationUrl ? `<a class="button button-dark" href="${html(event.registrationUrl)}" target="_blank" rel="noopener noreferrer">Registration details <span aria-hidden="true">↗</span></a>` : "";
+    const register = event.registrationStatus === "open" && event.registrationUrl
+      ? `<a class="button button-dark" href="${html(event.registrationUrl)}" target="_blank" rel="noopener noreferrer">Register on organizer site <span aria-hidden="true">↗</span></a>`
+      : event.registrationStatus === "open"
+        ? `<div class="registration-message"><span class="registration-mark" aria-hidden="true">↗</span><span><strong>Registration is open</strong><small>The organizer hasn’t shared a sign-up link in the event feed yet.</small></span></div>`
+        : event.registrationStatus === "sold_out"
+          ? `<div class="registration-message is-closed"><span class="registration-mark" aria-hidden="true">×</span><span><strong>Sold out</strong><small>This event has no remaining registration places.</small></span></div>`
+          : event.registrationStatus === "closed"
+            ? `<div class="registration-message is-closed"><span class="registration-mark" aria-hidden="true">✓</span><span><strong>Registration is closed</strong><small>Check back with the organizers for any updates.</small></span></div>`
+            : `<div class="registration-message is-closed"><span class="registration-mark" aria-hidden="true">i</span><span><strong>Registration details not listed</strong><small>Check with the organizers before making plans.</small></span></div>`;
     const typeLabel = event.eventType === "workshop" ? "Workshop" : "Event";
-    detailContent.innerHTML = `${tag}<div class="detail-layout">${eventPoster(event, true)}<div class="detail-copy"><p class="eyebrow"><span class="section-number">${html(event.category.toUpperCase())}</span> / ${html(statusLabel(event.eventStatus).toUpperCase())}</p><h1 id="detail-title">${html(event.title)}</h1><p>${html(event.description)}</p>${tags}<div class="detail-facts"><div class="detail-fact"><span>WHEN</span><strong>${html(date)} · ${html(time)}</strong></div><div class="detail-fact"><span>FORMAT</span><strong>${html(typeLabel)} · ${html(event.modeLabel)}${event.isTechnical ? " · Technical" : ""}</strong></div><div class="detail-fact"><span>REGISTRATION</span><strong>${html(statusLabel(event.registrationStatus))}<small>${html(deadlineLabel(event.registrationDeadline))}</small></strong></div><div class="detail-fact"><span>ENTRY</span><strong>${html(event.priceLabel)}</strong></div><div class="detail-fact"><span>TEAM SIZE</span><strong>${html(teamLabel)}</strong></div><div class="detail-fact"><span>SEATS</span><strong>${html(seatLabel)}</strong></div></div>${register}</div></div>`;
+    detailContent.innerHTML = `${tag}<div class="detail-layout">${eventPoster(event, true)}<div class="detail-copy"><p class="eyebrow"><span class="section-number">${html(event.category.toUpperCase())}</span> / ${html(statusLabel(event.eventStatus).toUpperCase())}</p><h1 id="detail-title">${html(event.title)}</h1><p>${html(event.description)}</p>${tags}<div class="detail-facts"><div class="detail-fact"><span>WHEN</span><strong>${html(date)} · ${html(time)}</strong></div><div class="detail-fact"><span>FORMAT</span><strong>${html(typeLabel)} · ${html(event.modeLabel)}${event.isTechnical ? " · Technical" : ""}</strong></div><div class="detail-fact"><span>REGISTRATION</span><strong>${html(statusLabel(event.registrationStatus))}<small>${html(deadlineLabel(event.registrationDeadline))}</small></strong></div><div class="detail-fact"><span>ENTRY</span><strong>${html(event.priceLabel)}</strong></div><div class="detail-fact"><span>TEAM SIZE</span><strong>${html(teamLabel)}</strong></div><div class="detail-fact"><span>SEATS</span><strong>${html(seatLabel)}</strong></div></div><div class="detail-actions">${register}<div class="detail-tool-row"><button class="button button-outline" type="button" data-add-calendar>Add to calendar <span aria-hidden="true">＋</span></button><button class="button button-outline" type="button" data-copy-event>Copy event link <span aria-hidden="true">⧉</span></button></div><p class="detail-action-status" role="status" aria-live="polite"></p></div></div></div>`;
+    const actionStatus = detailContent.querySelector(".detail-action-status");
+    const eventUrl = new URL(location.href);
+    eventUrl.search = "";
+    eventUrl.hash = "";
+    eventUrl.searchParams.set("id", event.id);
+    detailContent.querySelector("[data-add-calendar]")?.addEventListener("click", (clickEvent) => {
+      const downloaded = downloadCalendar(event, eventUrl.href);
+      if (actionStatus) actionStatus.textContent = downloaded ? "Calendar event downloaded. Open the .ics file to add it to your calendar." : "A calendar file isn’t available until the event date is listed.";
+      clickEvent.currentTarget?.blur();
+    });
+    detailContent.querySelector("[data-copy-event]")?.addEventListener("click", async (clickEvent) => {
+      try {
+        await copyText(eventUrl.href);
+        if (actionStatus) actionStatus.textContent = "Event link copied to your clipboard.";
+      } catch (_) {
+        if (actionStatus) actionStatus.textContent = "Copy isn’t available here. You can copy the event address from your browser.";
+      }
+      clickEvent.currentTarget?.blur();
+    });
   }
 
   document.querySelectorAll("#year").forEach((element) => { element.textContent = String(new Date().getFullYear()); });
