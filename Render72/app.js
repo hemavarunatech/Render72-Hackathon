@@ -165,6 +165,74 @@
   const detailSection = document.querySelector("#event-detail");
   const detailContent = document.querySelector("#detail-content");
   const listSection = document.querySelector(".event-explorer");
+  const spotlightCard = document.querySelector("#spotlight-card");
+
+  async function renderSpotlight() {
+    if (!spotlightCard) return;
+    const { events, source } = await loadEvents();
+    const count = document.querySelector("#spotlight-count");
+    const countLabel = document.querySelector("#spotlight-count-label");
+    const sourceLabel = document.querySelector("#spotlight-source");
+    const isLive = source !== "fallback" && source !== "preview";
+    const nowTime = Date.now();
+    const upcoming = events.filter((event) => {
+      const date = dateValue(event.date);
+      return event.eventStatus !== "completed" && (!validDate(date) || date.getTime() >= nowTime);
+    });
+    const candidates = upcoming.length ? upcoming : events.filter((event) => event.eventStatus === "active");
+    const ordered = [...(candidates.length ? candidates : events)].sort((a, b) => {
+      if (a.isFeatured !== b.isFeatured) return a.isFeatured ? -1 : 1;
+      const aTime = dateValue(a.date)?.getTime() ?? Number.MAX_SAFE_INTEGER;
+      const bTime = dateValue(b.date)?.getTime() ?? Number.MAX_SAFE_INTEGER;
+      return aTime - bTime;
+    });
+    const event = ordered[0];
+    if (count) count.textContent = String(events.length);
+    if (countLabel) countLabel.textContent = isLive ? "events in the live feed" : "preview events while the feed reconnects";
+    if (sourceLabel) sourceLabel.textContent = isLive ? "LIVE · RENDER72 EVENT FEED" : "PREVIEW · LIVE FEED UNAVAILABLE";
+    spotlightCard.classList.toggle("is-preview", !isLive);
+    if (!event) {
+      spotlightCard.setAttribute("aria-busy", "false");
+      return;
+    }
+    const setText = (selector, value) => {
+      const element = document.querySelector(selector);
+      if (element) element.textContent = value;
+    };
+    const date = dateValue(event.date);
+    const dateParts = validDate(date)
+      ? new Intl.DateTimeFormat("en-IN", { month: "short", day: "2-digit", timeZone: "Asia/Kolkata" }).formatToParts(date)
+      : [];
+    setText("#spotlight-day", dateParts.find((part) => part.type === "day")?.value || "—");
+    setText("#spotlight-month", dateParts.find((part) => part.type === "month")?.value?.toUpperCase() || "UP NEXT");
+    setText("#spotlight-category", event.category.toUpperCase());
+    setText("#spotlight-status", event.registrationStatus === "open" ? "REGISTRATION OPEN" : statusLabel(event.registrationStatus).toUpperCase());
+    const titleElement = document.querySelector("#spotlight-title");
+    if (titleElement) {
+      const titleWords = event.title.trim().split(/\s+/);
+      const accent = titleWords.pop() || event.title;
+      titleElement.replaceChildren(document.createTextNode(titleWords.length ? `${titleWords.join(" ")} ` : ""));
+      const emphasis = document.createElement("em");
+      emphasis.textContent = accent;
+      titleElement.appendChild(emphasis);
+    }
+    setText("#spotlight-description", event.description);
+    setText("#spotlight-when", eventDateLabel(event));
+    setText("#spotlight-where", event.modeLabel === "Online" ? "Online" : event.venue || event.modeLabel);
+    setText("#spotlight-entry", event.priceLabel);
+    spotlightCard.href = `/events.html?id=${encodeURIComponent(event.id)}`;
+    spotlightCard.setAttribute("aria-label", `View event details for ${event.title}`);
+    const image = document.querySelector("#spotlight-image");
+    const poster = safeUrl(event.poster);
+    if (image && poster) {
+      image.alt = event.posterAlt;
+      image.hidden = false;
+      image.onerror = () => { image.hidden = true; spotlightCard.classList.remove("has-image"); };
+      image.onload = () => spotlightCard.classList.add("has-image");
+      image.src = poster;
+    }
+    spotlightCard.setAttribute("aria-busy", "false");
+  }
 
   function displayNotice(message) {
     if (!notice) return;
@@ -266,6 +334,7 @@
   }
 
   document.querySelectorAll("#year").forEach((element) => { element.textContent = String(new Date().getFullYear()); });
+  renderSpotlight();
   document.querySelectorAll(".menu-toggle").forEach((button) => button.addEventListener("click", () => {
     const nav = document.querySelector(".main-nav");
     const open = button.getAttribute("aria-expanded") !== "true";
