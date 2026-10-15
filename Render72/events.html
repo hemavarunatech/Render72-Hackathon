@@ -8,6 +8,7 @@
   <title>Explore events — Sidequest</title>
   <link rel="icon" href="/favicon.svg" type="image/svg+xml">
   <link rel="ai-catalog" href="/.well-known/ai-catalog.json" type="application/ai-catalog+json">
+  <script>if (new URLSearchParams(location.search).has("id")) document.documentElement.classList.add("event-query");</script>
   <link rel="stylesheet" href="/styles.css">
 </head>
 <body class="events-page">
@@ -40,7 +41,7 @@
       <div id="empty-state" class="empty-state" hidden><span aria-hidden="true">⌕</span><h3>No plans found. Yet.</h3><p>Try a different search or clear your filters. Your next good thing is out there.</p><button class="button button-dark" id="clear-filters" type="button">Clear filters</button></div>
       <div class="load-more-wrap"><button class="button button-outline" id="load-more" type="button" hidden>Show more events <span aria-hidden="true">↓</span></button></div>
     </section>
-    <section id="event-detail" class="event-detail" hidden aria-labelledby="detail-title"><a class="back-link" href="/events.html">← Back to all events</a><div id="detail-content"></div></section>
+    <section id="event-detail" class="event-detail" hidden aria-labelledby="detail-title"><a class="back-link" href="/events.html">← Back to all events</a><div id="detail-content"><p class="detail-loading" role="status">Finding the details…</p></div></section>
     <section class="events-bottom"><p class="eyebrow">MAKE THE FIRST MOVE</p><p>Keep following your curiosity.<br><a href="/events.html">Browse all events ↗</a></p></section>
   </main>
   <footer class="site-footer"><div class="footer-main wrap"><a class="brand brand-footer" href="/" aria-label="Sidequest home"><span class="brand-mark">s<span>q</span></span><span>SIDEQUEST</span></a><p>Good plans travel.<br>Pass one along.</p><div class="footer-links"><a href="/">Home</a><a href="/#about">Our thing</a><a href="/events.html">Explore events ↗</a></div></div><div class="footer-bottom wrap"><span>© <span id="year"></span> SIDEQUEST STUDIO</span><span>GO OUTSIDE. BE A PERSON.</span><a href="#main">BACK TO TOP ↑</a></div></footer>
