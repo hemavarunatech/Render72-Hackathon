@@ -1,0 +1,12 @@
+{
+  "specVersion": "1.0",
+  "entries": [
+    {
+      "identifier": "urn:air:render72.pages.dev:api:event-list",
+      "displayName": "Render72 public event feed",
+      "type": "application/json",
+      "url": "https://render72.pages.dev/api/test/events",
+      "description": "Public JSON feed of sample campus events used by Sidequest."
+    }
+  ]
+}
