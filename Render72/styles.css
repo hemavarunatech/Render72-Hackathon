@@ -127,3 +127,11 @@
 .detail-action-status{min-height:0;margin:0;color:var(--blue);font-size:10px;line-height:1.5}
 .detail-action-status:empty{display:none}
 @media(max-width:640px){.detail-actions{padding:14px;margin-top:19px}.detail-actions>.button{width:100%}.detail-tool-row{display:grid;grid-template-columns:1fr 1fr;gap:7px}.detail-tool-row .button{min-height:44px;padding-inline:9px;font-size:9px;gap:6px}.registration-message small{font-size:9px}}
+
+/* Keep direct event links stable while the live API resolves. */
+html.event-query .event-explorer{display:none!important}
+html.event-query #event-detail[hidden]{display:block!important}
+html.event-query #event-detail{min-height:860px}
+html.event-query #detail-content{min-height:720px}
+html.event-query #detail-content .detail-loading{min-height:720px;margin:0;padding-top:32px;color:var(--muted);font-size:11px}
+@media(max-width:640px){html.event-query #event-detail{min-height:1400px}html.event-query #detail-content{min-height:1200px}html.event-query #detail-content .detail-loading{min-height:1200px}}
