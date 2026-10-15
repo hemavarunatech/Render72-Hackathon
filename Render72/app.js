@@ -31,9 +31,10 @@
     if (typeof value === "number") return new Date(value);
     const raw = String(value);
     const plain = raw.match(/^(\d{4})-(\d{2})-(\d{2})$/);
-    return plain ? new Date(Number(plain[1]), Number(plain[2]) - 1, Number(plain[3])) : new Date(raw);
+    return plain ? new Date(`${raw}T12:00:00+05:30`) : new Date(raw);
   };
   const validDate = (date) => date instanceof Date && !Number.isNaN(date.getTime());
+  const numeric = (value) => value === undefined || value === null || value === "" ? null : Number.isFinite(Number(value)) ? Number(value) : null;
   const safeUrl = (value) => {
     if (!value) return "";
     try {
@@ -43,37 +44,65 @@
   };
   const dateLabel = (value) => {
     const date = dateValue(value);
-    return validDate(date) ? new Intl.DateTimeFormat("en-IN", { weekday: "short", month: "short", day: "numeric" }).format(date) : "Date to be announced";
+    return validDate(date) ? new Intl.DateTimeFormat("en-IN", { weekday: "short", month: "short", day: "numeric", timeZone: "Asia/Kolkata" }).format(date) : "Date to be announced";
   };
   const timeLabel = (value, separateTime = "") => {
     if (separateTime) {
       const timeMatch = String(separateTime).match(/^(\d{1,2}):(\d{2})(?::\d{2})?$/);
       if (timeMatch) {
-        const date = new Date(2000, 0, 1, Number(timeMatch[1]), Number(timeMatch[2]));
-        return new Intl.DateTimeFormat("en-IN", { hour: "numeric", minute: "2-digit" }).format(date);
+        const hour = Number(timeMatch[1]);
+        const minute = Number(timeMatch[2]);
+        return `${hour % 12 || 12}:${String(minute).padStart(2, "0")} ${hour >= 12 ? "pm" : "am"}`;
       }
       return String(separateTime);
     }
     if (typeof value === "string" && /^\d{4}-\d{2}-\d{2}$/.test(value)) return "Time to be announced";
     const date = dateValue(value);
-    return validDate(date) ? new Intl.DateTimeFormat("en-IN", { hour: "numeric", minute: "2-digit" }).format(date) : "Time to be announced";
+    return validDate(date) ? new Intl.DateTimeFormat("en-IN", { hour: "numeric", minute: "2-digit", timeZone: "Asia/Kolkata" }).format(date) : "Time to be announced";
   };
+  const dateKey = (value) => {
+    const date = dateValue(value);
+    return validDate(date) ? new Intl.DateTimeFormat("en-CA", { year: "numeric", month: "2-digit", day: "2-digit", timeZone: "Asia/Kolkata" }).format(date) : "";
+  };
+  const eventDateLabel = (event) => event.endDate && dateKey(event.endDate) && dateKey(event.endDate) !== dateKey(event.date) ? `${dateLabel(event.date)} – ${dateLabel(event.endDate)}` : dateLabel(event.date);
+  const eventTimeLabel = (event) => {
+    const start = timeLabel(event.date, event.time);
+    const end = event.endTime ? timeLabel(event.endDate || event.date, event.endTime) : "";
+    return end ? `${start} – ${end}` : start;
+  };
+  const statusLabel = (value) => ({ open: "Registration open", closed: "Registration closed", sold_out: "Sold out", active: "Upcoming", completed: "Completed", unknown: "Registration info" }[String(value || "").toLowerCase()] || String(value || "Details").replaceAll("_", " "));
+  const deadlineLabel = (value) => value ? `${dateLabel(value)} · ${timeLabel(value)}` : "Not listed";
   const normalizeEvent = (event, index = 0) => {
     if (!event || typeof event !== "object") return null;
+    const schedule = first(event.schedule_summary, event.scheduleSummary, {});
     const title = first(event.title, event.name, event.eventName, event.event_name, "Untitled event");
     const id = first(event.id, event.eventId, event.event_id, event._id, `event-${index + 1}`);
-    const rawDate = first(event.startDate, event.start_date, event.eventDate, event.event_date, event.dateTime, event.date_time, event.datetime, event.date, event.startsAt, event.starts_at);
-    const separateTime = first(event.startTime, event.start_time, event.eventTime, event.event_time, event.time, "");
-    const date = typeof rawDate === "string" && /^\d{4}-\d{2}-\d{2}$/.test(rawDate) && /^\d{1,2}:\d{2}/.test(String(separateTime)) ? `${rawDate}T${separateTime}` : rawDate;
-    const venueValue = first(event.venue, event.locationName, event.location_name, event.location, event.place, event.venueName, "Location to be announced");
-    const venue = typeof venueValue === "object" ? first(venueValue.name, venueValue.venue, venueValue.title, "Location to be announced") : venueValue;
+    const rawDate = first(schedule.start_date, event.startDate, event.start_date, event.eventDate, event.event_date, event.dateTime, event.date_time, event.datetime, event.date, event.startsAt, event.starts_at);
+    const separateTime = first(schedule.start_time, event.startTime, event.start_time, event.eventTime, event.event_time, event.time, "");
+    const rawEndDate = first(schedule.end_date, event.endDate, event.end_date, event.endsAt, event.ends_at, "");
+    const endTime = first(schedule.end_time, event.endTime, event.end_time, "");
+    const combineDateTime = (day, time) => typeof day === "string" && /^\d{4}-\d{2}-\d{2}$/.test(day) && /^\d{1,2}:\d{2}/.test(String(time)) ? `${day}T${String(time).slice(0, 5)}:00+05:30` : day;
+    const date = combineDateTime(rawDate, separateTime);
+    const endDate = combineDateTime(rawEndDate, endTime);
+    const venueValue = first(event.venue, event.locationName, event.location_name, event.location, event.place, event.venueName, "");
+    const venue = typeof venueValue === "object" ? first(venueValue.name, venueValue.venue, venueValue.title, "") : venueValue;
     const placeDetail = first(event.address, event.addressLine, event.address_line, event.campus, event.room, event.locationDetails, "");
-    const category = first(event.category, event.eventType, event.event_type, event.type, event.tag, "Gathering");
-    const description = first(event.description, event.summary, event.about, event.details, "A good thing to put on your calendar.");
-    const poster = first(event.imageUrl, event.image_url, event.image, event.coverImage, event.cover_image, event.bannerUrl, "");
-    const price = first(event.priceLabel, event.price_label, event.price, event.isFree === true ? "Free" : event.is_free === true ? "Free" : "Details inside");
+    const category = first(event.category, event.type, event.tag, "Gathering");
+    const description = first(event.description, event.blurb, event.summary, event.about, event.details, "A good thing to put on your calendar.");
+    const poster = first(event.cover_image_url, event.imageUrl, event.image_url, event.image, event.coverImage, event.cover_image, event.bannerUrl, "");
+    const posterAlt = first(event.cover_image_alt, event.image_alt, event.imageAlt, `${title} event cover`, "");
+    const rawPrice = numeric(event.price);
+    const price = rawPrice !== null ? rawPrice === 0 ? "Free" : `₹${new Intl.NumberFormat("en-IN", { maximumFractionDigits: 0 }).format(rawPrice)}${event.is_per_head ? " / person" : " / team"}` : String(first(event.priceLabel, event.price_label, "See event details"));
+    const mode = String(first(event.event_mode, event.eventMode, "")).toUpperCase();
+    const locationLabel = mode === "ONLINE" ? "Online" : mode === "OFFLINE" ? "On campus" : String(first(venue, "Location to be announced"));
+    const tags = Array.isArray(event.tags) ? event.tags.map(String) : [];
+    const seatsTotal = numeric(event.total_seats);
+    const seatsFilled = numeric(event.seats_filled);
+    const seatsLeft = seatsTotal !== null && seatsTotal > 0 && seatsFilled !== null ? Math.max(0, seatsTotal - seatsFilled) : null;
+    const minTeamSize = numeric(event.min_teamsize);
+    const maxTeamSize = numeric(event.max_teamsize);
     const palette = ["lime", "blue", "coral", "purple", "cream", "dark"][index % 6];
-    return { ...event, id: String(id), title: String(title), date, time: separateTime, venue: String(venue), placeDetail: String(placeDetail), category: String(category), description: String(description), poster: String(poster), price: String(price), symbol: String(first(event.symbol, event.icon, "✳")), palette, organizer: String(first(event.organizer, event.host, event.organizerName, event.organizer_name, "Event team")), registrationUrl: safeUrl(first(event.registrationUrl, event.registration_url, event.url, event.link, "")) };
+    return { ...event, id: String(id), title: String(title), date, time: separateTime, endDate, endTime, venue: String(venue || locationLabel), placeDetail: String(placeDetail), category: String(category), description: String(description), poster: String(poster), posterAlt: String(posterAlt), tags, priceLabel: price, eventType: String(first(event.event_type, event.eventType, "EVENT")).toLowerCase(), modeLabel: mode === "ONLINE" ? "Online" : mode === "OFFLINE" ? "Offline" : "Mode to be announced", eventStatus: String(first(event.event_status, event.eventStatus, "ACTIVE")).toLowerCase(), registrationStatus: String(first(event.registration_status, event.registrationStatus, "UNKNOWN")).toLowerCase(), registrationDeadline: first(event.registration_deadline, event.registrationDeadline, ""), isFeatured: Boolean(event.is_featured ?? event.isFeatured), isTechnical: Boolean(event.is_technical ?? event.isTechnical), seatsTotal, seatsFilled, seatsLeft, teamSize: minTeamSize !== null && maxTeamSize !== null ? minTeamSize === 1 && maxTeamSize === 1 ? "Solo entry" : minTeamSize === maxTeamSize ? `${minTeamSize} people` : `${minTeamSize}–${maxTeamSize} people` : "", palette, organizer: String(first(event.organizer, event.host, event.organizerName, event.organizer_name, "Event team")), registrationUrl: safeUrl(first(event.registrationUrl, event.registration_url, event.url, event.link, "")) };
   };
   const unpack = (json) => {
     const value = json?.events ?? json?.event ?? json?.data?.events ?? json?.data?.event ?? json?.data ?? json?.results ?? json?.items ?? json?.result ?? json;
@@ -131,6 +160,7 @@
   const loadMore = document.querySelector("#load-more");
   const searchInput = document.querySelector("#event-search");
   const categoryFilters = document.querySelector("#category-filters");
+  const typeFilter = document.querySelector("#event-type");
   const sortSelect = document.querySelector("#event-sort");
   const detailSection = document.querySelector("#event-detail");
   const detailContent = document.querySelector("#detail-content");
@@ -143,22 +173,27 @@
   }
   function eventPoster(event, detail = false) {
     const posterUrl = safeUrl(event.poster);
-    if (posterUrl) return `<div class="${detail ? "detail-poster" : "event-poster"} poster-${html(event.palette)}"><img src="${html(posterUrl)}" alt="" loading="lazy" decoding="async"></div>`;
+    if (posterUrl) return `<div class="${detail ? "detail-poster" : "event-poster"} poster-${html(event.palette)}"><img src="${html(posterUrl)}" alt="${detail ? html(event.posterAlt) : ""}" loading="lazy" decoding="async"></div>`;
     return `<div class="${detail ? "detail-poster" : "event-poster"} poster-${html(event.palette)}" aria-hidden="true"><span class="poster-shape">${html(event.symbol)}</span>${detail ? "" : `<span class="poster-word">${html(event.category.toUpperCase())}</span>`}</div>`;
   }
   function renderCard(event) {
-    const time = timeLabel(event.date, event.time);
-    const date = dateLabel(event.date);
-    return `<a class="event-row" href="/events.html?id=${encodeURIComponent(event.id)}" aria-label="View ${html(event.title)} details">
+    const time = eventTimeLabel(event);
+    const date = eventDateLabel(event);
+    const availability = event.seatsLeft !== null ? event.seatsLeft === 0 ? "No seats left" : `${event.seatsLeft} seats left` : event.priceLabel;
+    const type = event.eventType === "workshop" ? "Workshop" : "Event";
+    const featured = event.isFeatured ? `<span class="event-badge badge-featured">Featured</span>` : "";
+    return `<a class="event-row${event.isFeatured ? " is-featured" : ""}" href="/events.html?id=${encodeURIComponent(event.id)}" aria-label="View ${html(event.title)} details">
       ${eventPoster(event)}
-      <div class="event-copy"><div class="event-meta"><span class="event-category">${html(event.category)}</span><span class="event-meta-dot"></span><span>${html(date)}</span></div><h3>${html(event.title)}</h3><p>${html(event.description)}</p></div>
-      <div class="event-place"><strong>${html(event.venue)}</strong><span>${html(time)}${event.placeDetail ? ` · ${html(event.placeDetail)}` : ""}</span></div><span class="event-arrow" aria-hidden="true">↗</span></a>`;
+      <div class="event-copy"><div class="event-meta"><span class="event-category">${html(event.category)}</span><span class="event-meta-dot"></span><span>${html(date)}</span></div><h3>${html(event.title)}</h3><p>${html(event.description)}</p><div class="event-badges">${featured}<span class="event-badge">${html(type)}</span><span class="event-badge">${html(statusLabel(event.registrationStatus))}</span>${event.isTechnical ? `<span class="event-badge">Technical</span>` : ""}</div></div>
+      <div class="event-place"><strong>${html(event.venue)}</strong><span>${html(event.modeLabel)} · ${html(time)}</span><span class="event-subinfo">${html(availability)}</span></div><span class="event-arrow" aria-hidden="true">↗</span></a>`;
   }
   function renderCategories() {
     if (!categoryFilters) return;
     const categories = [...new Set(allEvents.map((event) => event.category).filter(Boolean))].sort((a, b) => a.localeCompare(b));
     const requestedCategory = new URLSearchParams(location.search).get("category");
     if (requestedCategory && categories.some((category) => category.toLowerCase() === requestedCategory.toLowerCase())) currentCategory = categories.find((category) => category.toLowerCase() === requestedCategory.toLowerCase());
+    const requestedType = new URLSearchParams(location.search).get("type")?.toLowerCase();
+    if (requestedType && ["event", "workshop"].includes(requestedType) && typeFilter) typeFilter.value = requestedType;
     categoryFilters.innerHTML = `<button class="filter-chip ${currentCategory === "all" ? "is-active" : ""}" type="button" data-category="all" aria-pressed="${currentCategory === "all"}">Everything</button>${categories.map((category) => `<button class="filter-chip ${currentCategory === category ? "is-active" : ""}" type="button" data-category="${html(category)}" aria-pressed="${currentCategory === category}">${html(category)}</button>`).join("")}`;
     categoryFilters.querySelectorAll("button").forEach((button) => button.addEventListener("click", () => {
       currentCategory = button.dataset.category;
@@ -169,10 +204,12 @@
   }
   function filteredEvents() {
     const query = (searchInput?.value || "").trim().toLowerCase();
+    const currentType = typeFilter?.value || "all";
     const items = allEvents.filter((event) => {
       const inCategory = currentCategory === "all" || event.category === currentCategory;
-      const searchable = `${event.title} ${event.description} ${event.category} ${event.venue} ${event.placeDetail} ${event.organizer}`.toLowerCase();
-      return inCategory && (!query || searchable.includes(query));
+      const inType = currentType === "all" || event.eventType === currentType;
+      const searchable = `${event.title} ${event.description} ${event.category} ${event.venue} ${event.placeDetail} ${event.organizer} ${event.tags.join(" ")} ${event.modeLabel} ${event.eventType}`.toLowerCase();
+      return inCategory && inType && (!query || searchable.includes(query));
     });
     const sort = sortSelect?.value || "soonest";
     items.sort((a, b) => {
@@ -190,7 +227,7 @@
     list.innerHTML = shown.map(renderCard).join("");
     list.setAttribute("aria-busy", "false");
     if (note) note.textContent = `${items.length} ${items.length === 1 ? "good thing" : "good things"} to get out for`;
-    const noQuery = !searchInput?.value && currentCategory === "all";
+    const noQuery = !searchInput?.value && currentCategory === "all" && (!typeFilter || typeFilter.value === "all");
     if (emptyState) emptyState.hidden = !(items.length === 0 && !isPreview);
     if (items.length === 0 && isPreview) {
       if (emptyState) emptyState.hidden = false;
@@ -218,10 +255,14 @@
       return;
     }
     const tag = detailError ? `<p class="feed-notice">${html(detailError)}</p>` : "";
-    const date = dateLabel(event.date);
-    const time = timeLabel(event.date, event.time);
-    const register = event.registrationUrl ? `<a class="button button-dark" href="${html(event.registrationUrl)}" target="_blank" rel="noopener noreferrer">Event information <span aria-hidden="true">↗</span></a>` : `<a class="button button-dark" href="mailto:hello@sidequest.example?subject=${encodeURIComponent(`Question about ${event.title}`)}">Ask about this event <span aria-hidden="true">↗</span></a>`;
-    detailContent.innerHTML = `${tag}<div class="detail-layout">${eventPoster(event, true)}<div class="detail-copy"><p class="eyebrow"><span class="section-number">${html(event.category.toUpperCase())}</span> / THE DETAILS</p><h1 id="detail-title">${html(event.title)}</h1><p>${html(event.description)}</p><div class="detail-facts"><div class="detail-fact"><span>WHEN</span><strong>${html(date)} · ${html(time)}</strong></div><div class="detail-fact"><span>WHERE</span><strong>${html(event.venue)}${event.placeDetail ? ` · ${html(event.placeDetail)}` : ""}</strong></div><div class="detail-fact"><span>HOSTED BY</span><strong>${html(event.organizer)}</strong></div><div class="detail-fact"><span>ENTRY</span><strong>${html(event.price)}</strong></div></div>${register}</div></div>`;
+    const date = eventDateLabel(event);
+    const time = eventTimeLabel(event);
+    const teamLabel = event.teamSize || (numeric(event.min_teamsize) === 1 ? "Solo entry" : "Team details not listed");
+    const seatLabel = event.seatsTotal !== null ? `${event.seatsFilled ?? 0} of ${event.seatsTotal} seats taken` : "Capacity not listed";
+    const tags = event.tags.length ? `<div class="detail-tags" aria-label="Topics">${event.tags.map((item) => `<span>${html(item)}</span>`).join("")}</div>` : "";
+    const register = event.registrationUrl ? `<a class="button button-dark" href="${html(event.registrationUrl)}" target="_blank" rel="noopener noreferrer">Registration details <span aria-hidden="true">↗</span></a>` : "";
+    const typeLabel = event.eventType === "workshop" ? "Workshop" : "Event";
+    detailContent.innerHTML = `${tag}<div class="detail-layout">${eventPoster(event, true)}<div class="detail-copy"><p class="eyebrow"><span class="section-number">${html(event.category.toUpperCase())}</span> / ${html(statusLabel(event.eventStatus).toUpperCase())}</p><h1 id="detail-title">${html(event.title)}</h1><p>${html(event.description)}</p>${tags}<div class="detail-facts"><div class="detail-fact"><span>WHEN</span><strong>${html(date)} · ${html(time)}</strong></div><div class="detail-fact"><span>FORMAT</span><strong>${html(typeLabel)} · ${html(event.modeLabel)}${event.isTechnical ? " · Technical" : ""}</strong></div><div class="detail-fact"><span>REGISTRATION</span><strong>${html(statusLabel(event.registrationStatus))}<small>${html(deadlineLabel(event.registrationDeadline))}</small></strong></div><div class="detail-fact"><span>ENTRY</span><strong>${html(event.priceLabel)}</strong></div><div class="detail-fact"><span>TEAM SIZE</span><strong>${html(teamLabel)}</strong></div><div class="detail-fact"><span>SEATS</span><strong>${html(seatLabel)}</strong></div></div>${register}</div></div>`;
   }
 
   document.querySelectorAll("#year").forEach((element) => { element.textContent = String(new Date().getFullYear()); });
@@ -240,21 +281,18 @@
       if (source === "preview") displayNotice("Preview mode: this draft is showing sample events. Connect the Render72 event endpoints in config.js to load live data.");
       else if (source === "fallback") displayNotice(`The live event feed is unavailable${error?.name === "AbortError" ? " (request timed out)" : " right now"}. Here’s a clearly labeled preview schedule instead.`);
       renderCategories();
-      if (source === "preview" || source === "fallback") {
-        const banner = document.createElement("span");
-        banner.className = "sr-only";
-        banner.textContent = "Preview event data";
-      }
       const eventId = new URLSearchParams(location.search).get("id");
       renderList();
       if (eventId) renderDetail(eventId);
     });
     searchInput?.addEventListener("input", () => { visibleCount = PAGE_SIZE; renderList(); });
+    typeFilter?.addEventListener("change", () => { visibleCount = PAGE_SIZE; renderList(); });
     sortSelect?.addEventListener("change", renderList);
     loadMore?.addEventListener("click", () => { visibleCount += PAGE_SIZE; renderList(); });
     document.querySelector("#clear-filters")?.addEventListener("click", () => {
       if (searchInput) searchInput.value = "";
       currentCategory = "all";
+      if (typeFilter) typeFilter.value = "all";
       visibleCount = PAGE_SIZE;
       categoryFilters?.querySelectorAll("button").forEach((button) => { const active = button.dataset.category === "all"; button.classList.toggle("is-active", active); button.setAttribute("aria-pressed", String(active)); });
       if (sortSelect) sortSelect.value = "soonest";

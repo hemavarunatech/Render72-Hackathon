@@ -1,0 +1,3 @@
+User-agent: *
+Allow: /
+Sitemap: https://render72-hackathon.pages.dev/sitemap.xml

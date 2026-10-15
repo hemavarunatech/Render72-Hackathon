@@ -1,0 +1,11 @@
+# Sidequest
+
+> Sidequest is a campus event guide for discovering events, workshops, music, art, and community plans.
+
+## Pages
+- [Home](https://render72-hackathon.pages.dev/): Overview, event categories, and how to explore.
+- [Explore events](https://render72-hackathon.pages.dev/events.html): Search, filter, sort, and view event details.
+
+## Event data
+- [Render72 Events API documentation](https://render72.pages.dev/events-api): Documentation for the public event endpoints.
+- [All events API](https://render72.pages.dev/api/test/events): Returns event summaries as JSON.

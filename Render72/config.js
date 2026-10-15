@@ -1,11 +1,9 @@
 /*
- * Render72 API wiring: paste the exact endpoint URLs from the portal docs here.
- * Use {id} in eventByIdUrl, for example: "https://api.example/events/{id}".
- * Until configured, the site uses clearly labeled local preview events.
+ * Public Render72 sample-event API. These GET endpoints require no key or sign-in.
  */
 window.SIDEQUEST_CONFIG = {
-  allEventsUrl: "",
-  eventByIdUrl: "",
+  allEventsUrl: "https://render72.pages.dev/api/test/events",
+  eventByIdUrl: "https://render72.pages.dev/api/test/events/{id}",
   requestTimeoutMs: 8000,
   cacheTtlMs: 60000
 };

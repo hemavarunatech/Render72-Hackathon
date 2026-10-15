@@ -7,6 +7,7 @@
   <meta name="description" content="Find music, workshops, art, and good people with Sidequest's campus event guide.">
   <title>Explore events — Sidequest</title>
   <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+  <link rel="ai-catalog" href="/.well-known/ai-catalog.json" type="application/ai-catalog+json">
   <link rel="stylesheet" href="/styles.css">
 </head>
 <body class="events-page">
@@ -23,7 +24,7 @@
       <div class="explorer-top"><div><p class="eyebrow"><span class="section-number">01</span> THE WHAT’S ON LIST</p><h2 id="event-list-title">Open <em>invitation.</em></h2></div><p class="results-note" id="results-note" aria-live="polite">Finding your next thing…</p></div>
       <div class="filter-panel">
         <label class="search-box"><span class="search-icon" aria-hidden="true">⌕</span><span class="sr-only">Search events</span><input id="event-search" type="search" placeholder="Search by event, place, or vibe…" autocomplete="off"><kbd>Ctrl K</kbd></label>
-        <div class="filter-row"><div class="category-filters" id="category-filters" role="group" aria-label="Filter events by category"><button class="filter-chip is-active" type="button" data-category="all" aria-pressed="true">Everything</button></div><label class="sort-control">SORT <select id="event-sort" aria-label="Sort events"><option value="soonest">Soonest</option><option value="latest">Latest</option><option value="az">A to Z</option></select></label></div>
+        <div class="filter-row"><div class="category-filters" id="category-filters" role="group" aria-label="Filter events by category"><button class="filter-chip is-active" type="button" data-category="all" aria-pressed="true">Everything</button></div><div class="filter-selects"><label class="sort-control">TYPE <select id="event-type" aria-label="Filter by event type"><option value="all">All types</option><option value="event">Events</option><option value="workshop">Workshops</option></select></label><label class="sort-control">SORT <select id="event-sort" aria-label="Sort events"><option value="soonest">Soonest</option><option value="latest">Latest</option><option value="az">A to Z</option></select></label></div></div>
       </div>
       <div id="feed-notice" class="feed-notice" role="status" hidden></div>
       <div id="event-list" class="event-list" aria-live="polite" aria-busy="true"></div>
@@ -31,9 +32,9 @@
       <div class="load-more-wrap"><button class="button button-outline" id="load-more" type="button" hidden>Show more events <span aria-hidden="true">↓</span></button></div>
     </section>
     <section id="event-detail" class="event-detail" hidden aria-labelledby="detail-title"><a class="back-link" href="/events.html">← Back to all events</a><div id="detail-content"></div></section>
-    <section class="events-bottom"><p class="eyebrow">MAKE THE FIRST MOVE</p><p>Know about something good?<br><a href="mailto:hello@sidequest.example">Tell us about it ↗</a></p></section>
+    <section class="events-bottom"><p class="eyebrow">MAKE THE FIRST MOVE</p><p>Keep following your curiosity.<br><a href="/events.html">Browse all events ↗</a></p></section>
   </main>
-  <footer class="site-footer"><div class="footer-main wrap"><a class="brand brand-footer" href="/" aria-label="Sidequest home"><span class="brand-mark">s<span>q</span></span><span>SIDEQUEST</span></a><p>Good plans travel.<br>Pass one along.</p><div class="footer-links"><a href="/">Home</a><a href="/#about">Our thing</a><a href="mailto:hello@sidequest.example">Say hello ↗</a></div></div><div class="footer-bottom wrap"><span>© <span id="year"></span> SIDEQUEST STUDIO</span><span>GO OUTSIDE. BE A PERSON.</span><a href="#main">BACK TO TOP ↑</a></div></footer>
+  <footer class="site-footer"><div class="footer-main wrap"><a class="brand brand-footer" href="/" aria-label="Sidequest home"><span class="brand-mark">s<span>q</span></span><span>SIDEQUEST</span></a><p>Good plans travel.<br>Pass one along.</p><div class="footer-links"><a href="/">Home</a><a href="/#about">Our thing</a><a href="/events.html">Explore events ↗</a></div></div><div class="footer-bottom wrap"><span>© <span id="year"></span> SIDEQUEST STUDIO</span><span>GO OUTSIDE. BE A PERSON.</span><a href="#main">BACK TO TOP ↑</a></div></footer>
   <script src="/config.js"></script><script src="/app.js" defer></script>
 </body>
 </html>
