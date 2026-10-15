@@ -111,3 +111,19 @@
 @media(max-width:800px){.spotlight-section{padding-block:72px 82px}.spotlight-card{grid-template-columns:1fr;min-height:0}.spotlight-visual{min-height:0;aspect-ratio:1.38}.spotlight-content{padding:32px clamp(24px,6vw,45px) 28px}.spotlight-content h2{max-width:700px;font-size:clamp(39px,7vw,59px)}.spotlight-description{max-width:650px}}
 @media(max-width:640px){.hero-art{overflow:clip}.spotlight-section{padding-block:58px 68px}.spotlight-heading{display:block;margin-bottom:16px}.spotlight-subhead{font-size:19px}.spotlight-signal{margin-top:14px;font-size:7px}.spotlight-visual{aspect-ratio:1.12}.spotlight-art-label{top:17px;left:18px;right:18px;font-size:7px}.spotlight-date{left:18px;bottom:18px;width:60px;height:68px}.spotlight-date span{font-size:23px}.spotlight-visual-foot{right:18px;bottom:25px;font-size:6px}.spotlight-content{padding:26px 21px 22px}.spotlight-content h2{font-size:clamp(37px,10vw,50px);margin:18px 0 11px}.spotlight-description{font-size:11px}.spotlight-facts{gap:9px;margin:20px 0;padding:14px 0}.spotlight-facts span{font-size:6px}.spotlight-facts strong{font-size:8px}.spotlight-action{font-size:9px}.spotlight-arrow{width:34px;height:34px}.spotlight-bottom{font-size:7px;gap:12px;align-items:flex-start}.spotlight-bottom a{text-align:right;font-size:8px}}
 @media(prefers-reduced-motion:reduce){.ticket-main,.signal-dot,.spotlight-orbit span{animation:none!important}}
+
+/* Real event actions: clear registration states, downloadable calendar, and shareable URL. */
+.detail-actions{display:grid;gap:14px;margin-top:22px;padding:18px;border:1px solid var(--line);background:rgba(255,255,255,.48)}
+.detail-actions>.button{justify-self:start}
+.registration-message{display:flex;align-items:flex-start;gap:11px;color:var(--ink)}
+.registration-mark{flex:none;width:27px;height:27px;border-radius:50%;display:grid;place-items:center;background:var(--lime);font-size:14px;font-weight:900}
+.registration-message strong,.registration-message small{display:block}
+.registration-message strong{font-size:11px;line-height:1.4}
+.registration-message small{margin-top:4px;color:var(--muted);font-size:10px;line-height:1.55}
+.registration-message.is-closed .registration-mark{background:var(--paper-2);color:var(--muted)}
+.detail-tool-row{display:flex;flex-wrap:wrap;gap:9px}
+.detail-tool-row .button{min-height:44px;gap:10px;cursor:pointer}
+.detail-tool-row .button span{font-size:15px}
+.detail-action-status{min-height:0;margin:0;color:var(--blue);font-size:10px;line-height:1.5}
+.detail-action-status:empty{display:none}
+@media(max-width:640px){.detail-actions{padding:14px;margin-top:19px}.detail-actions>.button{width:100%}.detail-tool-row{display:grid;grid-template-columns:1fr 1fr;gap:7px}.detail-tool-row .button{min-height:44px;padding-inline:9px;font-size:9px;gap:6px}.registration-message small{font-size:9px}}
