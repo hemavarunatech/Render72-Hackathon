@@ -332,7 +332,31 @@
   }
   function eventPoster(event, detail = false) {
     const posterUrl = safeUrl(event.poster);
-    if (posterUrl) return `<div class="${detail ? "detail-poster" : "event-poster"} poster-${html(event.palette)}"><img src="${html(posterUrl)}" alt="${detail ? html(event.posterAlt) : ""}" loading="lazy" decoding="async"></div>`;
+    if (posterUrl) {
+      let imageSrc = posterUrl;
+      let imageSet = "";
+      let imageSizes = "";
+      try {
+        const original = new URL(posterUrl);
+        if (original.hostname === "images.pexels.com") {
+          const sourceWidth = Number(original.searchParams.get("w")) || 1200;
+          const sourceHeight = Number(original.searchParams.get("h")) || 800;
+          const aspect = sourceHeight / sourceWidth;
+          const widths = detail ? [480, 800, 1200] : [240, 480, 800];
+          const variant = (width) => {
+            const url = new URL(original);
+            url.searchParams.set("w", String(width));
+            url.searchParams.set("h", String(Math.round(width * aspect)));
+            return url.href;
+          };
+          imageSet = widths.map((width) => `${html(variant(width))} ${width}w`).join(", ");
+          imageSizes = detail ? "(max-width: 720px) calc(100vw - 2rem), 44vw" : "(max-width: 720px) 96px, 240px";
+          imageSrc = variant(detail ? 800 : 480);
+        }
+      } catch (_) { /* Keep the original safe URL if a responsive variant cannot be built. */ }
+      const imagePriority = detail ? 'loading="eager" fetchpriority="high"' : 'loading="lazy"';
+      return `<div class="${detail ? "detail-poster" : "event-poster"} poster-${html(event.palette)}"><img src="${html(imageSrc)}"${imageSet ? ` srcset="${imageSet}" sizes="${imageSizes}"` : ""} alt="${detail ? html(event.posterAlt) : ""}" ${imagePriority} decoding="async"></div>`;
+    }
     return `<div class="${detail ? "detail-poster" : "event-poster"} poster-${html(event.palette)}" aria-hidden="true"><span class="poster-shape">${html(event.symbol)}</span>${detail ? "" : `<span class="poster-word">${html(event.category.toUpperCase())}</span>`}</div>`;
   }
   function renderCard(event) {
