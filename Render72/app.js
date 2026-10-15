@@ -26,6 +26,10 @@
 
   const html = (value) => String(value ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]);
   const first = (...values) => values.find((value) => value !== undefined && value !== null && value !== "");
+  const cleanOptionalText = (value) => {
+    const text = String(value ?? "").trim();
+    return ["undefined", "null", "none", "n/a"].includes(text.toLowerCase()) ? "" : text;
+  };
   const dateValue = (value) => {
     if (!value) return null;
     if (typeof value === "number") return new Date(value);
@@ -121,13 +125,13 @@
       scheduleLines = [`DTSTART:${calendarStamp(start)}`, `DTEND:${calendarStamp(end)}`];
     } else return false;
 
-    const details = [event.description, event.venue, event.placeDetail].filter((value) => value && value !== "undefined").join("\n");
+    const details = [event.description, event.venue, event.placeDetail].map(cleanOptionalText).filter(Boolean).join("\n");
     const uid = `${String(event.id).replace(/[^a-zA-Z0-9._-]/g, "-")}@sidequest.events`;
     const lines = [
       "BEGIN:VCALENDAR", "VERSION:2.0", "PRODID:-//Sidequest//Campus Events//EN", "CALSCALE:GREGORIAN", "METHOD:PUBLISH",
       "BEGIN:VEVENT", `UID:${uid}`, `DTSTAMP:${calendarStamp(new Date())}`, ...scheduleLines,
       `SUMMARY:${calendarEscape(event.title)}`, `DESCRIPTION:${calendarEscape(details)}`,
-      `LOCATION:${calendarEscape([event.venue, event.placeDetail].filter((value) => value && value !== "undefined").join(" · "))}`, `URL:${eventUrl}`,
+      `LOCATION:${calendarEscape([event.venue, event.placeDetail].map(cleanOptionalText).filter(Boolean).join(" · "))}`, `URL:${eventUrl}`,
       "END:VEVENT", "END:VCALENDAR"
     ];
     const blob = new Blob([lines.map(foldCalendarLine).join("\r\n") + "\r\n"], { type: "text/calendar;charset=utf-8" });
@@ -172,8 +176,8 @@
     const date = combineDateTime(rawDate, separateTime);
     const endDate = combineDateTime(rawEndDate, endTime);
     const venueValue = first(event.venue, event.locationName, event.location_name, event.location, event.place, event.venueName, "");
-    const venue = typeof venueValue === "object" ? first(venueValue.name, venueValue.venue, venueValue.title, "") : venueValue;
-    const placeDetail = first(event.address, event.addressLine, event.address_line, event.campus, event.room, event.locationDetails, "") ?? "";
+    const venue = cleanOptionalText(typeof venueValue === "object" ? first(venueValue.name, venueValue.venue, venueValue.title, "") : venueValue);
+    const placeDetail = cleanOptionalText(first(event.address, event.addressLine, event.address_line, event.campus, event.room, event.locationDetails, ""));
     const category = first(event.category, event.type, event.tag, "Gathering");
     const description = first(event.description, event.blurb, event.summary, event.about, event.details, "A good thing to put on your calendar.");
     const poster = first(event.cover_image_url, event.imageUrl, event.image_url, event.image, event.coverImage, event.cover_image, event.bannerUrl, "");
